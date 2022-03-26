@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"github.com/jojomi/go-script/v2/print"
 	"github.com/jojomi/team/job"
 	"github.com/jojomi/team/persistance"
-	"os"
-
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+	"os"
+	"time"
 )
 
 func getHealthCmd() *cobra.Command {
@@ -17,6 +18,8 @@ func getHealthCmd() *cobra.Command {
 	}
 
 	f := cmd.Flags()
+	f.BoolP("required-only", "r", false, "only include currently required jobs in output")
+	f.BoolP("possible-only", "p", false, "only include currently possible jobs in output")
 	addJobSourceFlags(f)
 
 	return cmd
@@ -40,7 +43,22 @@ func handleHealth(env EnvHealth) error {
 
 	pool := getCLIPool(env.JobDir, env.JobFile)
 
-	for _, j := range pool.Jobs() {
+	if env.RequiredOnly {
+		pool = pool.RequiredOnly(func(j job.Job) time.Time {
+			t, err := getJobNextDate(j)
+			if err != nil {
+				log.Fatal().Err(err).Msgf("could not get next date for job %s", j.Metadata().Name)
+			}
+			return t
+		})
+	}
+	if env.PossibleOnly {
+		pool = pool.PossibleOnly()
+	}
+
+	count := len(pool.Jobs())
+	for i, j := range pool.Jobs() {
+		print.Boldf("[%d/%d] ", i+1, count)
 		job.PrintHeader(j, nil)
 
 		fmt.Print("\nLetzter erfolgreicher Lauf: ")

@@ -12,6 +12,9 @@ type EnvHealth struct {
 	Command string
 	Args    []string
 
+	RequiredOnly bool
+	PossibleOnly bool
+
 	Verbose bool
 }
 
@@ -29,6 +32,15 @@ func (e *EnvHealth) ParseFrom(command *cobra.Command, args []string) error {
 	}
 
 	e.JobFile, err = command.Flags().GetString("job-file")
+	if err != nil {
+		return err
+	}
+
+	e.RequiredOnly, err = command.Flags().GetBool("required-only")
+	if err != nil {
+		return err
+	}
+	e.PossibleOnly, err = command.Flags().GetBool("possible-only")
 	if err != nil {
 		return err
 	}

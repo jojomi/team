@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"time"
 )
 
 type Pool struct {
@@ -37,6 +38,15 @@ func (x *Pool) PossibleOnly() *Pool {
 			return false
 		}
 		return possible
+	})
+	return NewJobPoolWithJobs(filteredJobs)
+}
+
+func (x *Pool) RequiredOnly(next func(j Job) time.Time) *Pool {
+	now := time.Now()
+	filteredJobs := arrayMap[Job](x.jobs, func(job Job) bool {
+		nextTime := next(job)
+		return !now.Before(nextTime)
 	})
 	return NewJobPoolWithJobs(filteredJobs)
 }
