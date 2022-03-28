@@ -7,11 +7,12 @@ var defaultWeight = 0
 type Metadata struct {
 	JobType     string `yaml:"type"`
 	Filename    string
-	Name        string `yaml:"name,omitempty"`
-	Description string `yaml:"description,omitempty"`
-	Unattended  *bool  `yaml:"unattended,omitempty"`
-	Enabled     *bool  `yaml:"enabled,omitempty"`
-	Next        string `yaml:"next,omitempty"`
+	Name        string   `yaml:"name,omitempty"`
+	Description string   `yaml:"description,omitempty"`
+	Unattended  *bool    `yaml:"unattended,omitempty"`
+	Enabled     *bool    `yaml:"enabled,omitempty"`
+	Next        string   `yaml:"next,omitempty"`
+	Possible    []string `yaml:"possible,omitempty"`
 
 	Timeout time.Duration // TODO implement
 

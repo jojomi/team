@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"github.com/jojomi/go-script/v2"
 	"github.com/jojomi/go-script/v2/print"
+	jujuErrors "github.com/juju/errors"
 	"github.com/muesli/termenv"
 	"github.com/xeonx/timeago"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -89,4 +91,34 @@ func PrintHeader(j Job, next *time.Time) {
 
 func Timeago(date time.Time) string {
 	return timeago.German.Format(date)
+}
+
+func IsPossible(j Job) (bool, error) {
+	// job level decision (no means no)
+	jobPossible, err := j.IsPossible()
+	if err != nil {
+		return false, jujuErrors.Annotate(err, "could not check")
+	}
+	if !jobPossible {
+		return false, nil
+	}
+
+	// job config level decision (every voter can veto out)
+	voters := j.Metadata().Possible
+	sc := script.NewContext()
+	var (
+		lc *script.LocalCommand
+		pr *script.ProcessResult
+	)
+	for _, voter := range voters {
+		lc = script.LocalCommandFrom(voter)
+		pr, err = sc.ExecuteFullySilent(lc)
+		if err != nil {
+			return false, err
+		}
+		if !pr.Successful() {
+			return false, fmt.Errorf(strings.TrimSpace(pr.Error()))
+		}
+	}
+	return true, nil
 }

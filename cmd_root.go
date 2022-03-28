@@ -96,21 +96,19 @@ func handleRoot(env EnvRoot) error {
 
 	// loop relevant jobs in order
 	poolSize := len(requiredPool.Jobs())
+	var err error
 	for i, j := range requiredPool.Jobs() {
-		possible, err := j.IsPossible()
-		if err != nil && env.Verbose {
-			log.Warn().Err(err).Msgf("Job \"%s\" not possible", j.Metadata().Name)
-		}
-		if !possible {
-			continue
-		}
-
 		err = handleJobPreparation(j, env, i, poolSize)
 		if errors.Is(err, UserInterruptedError{}) {
 			fmt.Println()
 			break
 		}
 		if errors.Is(err, UserAbortedError{}) {
+			fmt.Println()
+			continue
+		}
+		if errors.Is(err, ImpossibleJobError{}) {
+			job.PrintUnsuccessful("", nil)
 			fmt.Println()
 			continue
 		}
@@ -176,7 +174,7 @@ func handleRoot(env EnvRoot) error {
 	}
 
 	totalDiff := time.Now().Sub(totalStart).Round(time.Second)
-	fmt.Printf("\nWorked on %d tasks for %s\n", handledJobs, totalDiff)
+	fmt.Printf("Worked on %d tasks for %s\n", handledJobs, totalDiff)
 
 	if env.Shutdown {
 		shutdown(env)
@@ -194,13 +192,43 @@ func handleJobPreparation(j job.Job, env EnvRoot, index, count int) error {
 	job.PrintHeader(j, &next)
 	fmt.Println()
 
-	possible, err := j.IsPossible()
-	if err != nil {
-		return jujuErrors.Annotate(err, "could not check")
+	if env.UnattendedOnly {
+		possible, err := job.IsPossible(j)
+		if err != nil {
+			return NewImpossibleJobError(err)
+		}
+		if !possible {
+			return NewImpossibleJobError(nil)
+		}
 	}
-	if !possible {
-		fmt.Println("No can do.")
-		return nil
+
+	var (
+		possible bool
+		jobError error
+	)
+	for {
+		possible, jobError = job.IsPossible(j)
+
+		if possible {
+			break
+		}
+
+		print.Bold("Job not possible")
+		fmt.Println(", reason:")
+
+		if jobError != nil {
+			fmt.Println(jobError)
+		} else if !possible {
+			fmt.Println("job not possible")
+		}
+
+		again, err := interview.Confirm("Try again?", false)
+		if err != nil {
+			return err
+		}
+		if !again {
+			return NewImpossibleJobError(jobError)
+		}
 	}
 
 	doExec := true
@@ -225,6 +253,16 @@ func handleJobExecution(j job.Job, env EnvRoot) error {
 		err error
 		id  uuid.UUID
 	)
+
+	// is this job possible?
+	possible, err := job.IsPossible(j)
+	if err != nil {
+		return NewImpossibleJobError(err)
+	}
+	if !possible {
+		return NewImpossibleJobError(nil)
+	}
+
 	if !env.DryRun {
 		id, err = logJobExecutionStart(j)
 		if err != nil {
