@@ -12,6 +12,7 @@ type EnvRoot struct {
 	SkipTimeCheck  bool
 	DefaultYes     bool
 	UnattendedOnly bool
+	PossibleOnly   bool
 	Shutdown       bool
 	SelectFirst    bool
 
@@ -53,6 +54,10 @@ func (e *EnvRoot) ParseFrom(command *cobra.Command, _ []string) error {
 	}
 
 	e.UnattendedOnly, err = command.Flags().GetBool("unattended-only")
+	if err != nil {
+		return err
+	}
+	e.PossibleOnly, err = command.Flags().GetBool("possible-only")
 	if err != nil {
 		return err
 	}

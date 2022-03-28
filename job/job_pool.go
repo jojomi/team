@@ -32,7 +32,7 @@ func (x *Pool) Jobs() []Job {
 
 func (x *Pool) PossibleOnly() *Pool {
 	filteredJobs := arrayMap[Job](x.jobs, func(job Job) bool {
-		possible, err := job.IsPossible()
+		possible, err := IsPossible(job)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Job %s: %s\n", job.Metadata().Name, err.Error())
 			return false
