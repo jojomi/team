@@ -66,6 +66,9 @@ func handleRootCmd(cmd *cobra.Command, args []string) {
 func handleRoot(env EnvRoot) error {
 	setLoggerVerbosity(env.Verbose)
 
+	totalStart := time.Now()
+	handledJobs := 0
+
 	pool := getCLIPool(env.JobDir, env.JobFile)
 	if env.UnattendedOnly {
 		pool = pool.UnattendedOnly()
@@ -119,14 +122,17 @@ func handleRoot(env EnvRoot) error {
 			continue
 		}
 
+		start := time.Now()
 		err = handleJobExecution(j, env)
+		handledJobs++
+		diff := time.Now().Sub(start).Round(time.Second)
 		if err != nil {
 			log.Error().Err(err).Str("filename", j.Metadata().Name).Msg("could not handle job")
-			job.PrintUnsuccessful("")
+			job.PrintUnsuccessful("", &diff)
 			fmt.Println()
 			continue
 		}
-		job.PrintSuccessful("")
+		job.PrintSuccessful("", &diff)
 		fmt.Println()
 	}
 
@@ -146,7 +152,10 @@ func handleRoot(env EnvRoot) error {
 			job.PrintHeader(j, nil)
 			fmt.Println()
 
+			start := time.Now()
 			err = handleJobExecution(j, env)
+			handledJobs++
+			diff := time.Now().Sub(start).Round(time.Second)
 			if errors.Is(err, UserInterruptedError{}) {
 				fmt.Println()
 				break
@@ -157,14 +166,17 @@ func handleRoot(env EnvRoot) error {
 			}
 			if err != nil {
 				log.Error().Err(err).Str("filename", j.Metadata().Name).Msg("could not handle job")
-				job.PrintUnsuccessful("")
+				job.PrintUnsuccessful("", &diff)
 				fmt.Println()
 				continue
 			}
-			job.PrintSuccessful("")
+			job.PrintSuccessful("", &diff)
 			fmt.Println()
 		}
 	}
+
+	totalDiff := time.Now().Sub(totalStart).Round(time.Second)
+	fmt.Printf("\nWorked on %d tasks for %s\n", handledJobs, totalDiff)
 
 	if env.Shutdown {
 		shutdown(env)

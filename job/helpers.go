@@ -46,20 +46,32 @@ func debugCommand(cmd script.Command, options ExecutionOptions) {
 	fmt.Println("»", termenv.String(cmd.String()).Foreground(cp.Color("#aaaa00")))
 }
 
-func PrintSuccessful(message string) {
+func PrintSuccessful(message string, duration *time.Duration) {
 	if message == "" {
 		message = "erfolgreich"
 	}
 
-	fmt.Println(termenv.String("✓ " + message).Foreground(cp.Color("#00cc66")))
+	c := cp.Color("#00cc66")
+
+	fmt.Print(termenv.String("✓ " + message).Foreground(c))
+	if duration != nil {
+		fmt.Print(" – " + duration.String())
+	}
+	fmt.Println()
 }
 
-func PrintUnsuccessful(message string) {
+func PrintUnsuccessful(message string, duration *time.Duration) {
 	if message == "" {
 		message = "fehlgeschlagen"
 	}
 
-	fmt.Println(termenv.String("× " + message).Foreground(cp.Color("#db4646")))
+	c := cp.Color("#db4646")
+
+	fmt.Print(termenv.String("× " + message).Foreground(c))
+	if duration != nil {
+		fmt.Print(" – " + duration.String())
+	}
+	fmt.Println()
 }
 
 func PrintHeader(j Job, next *time.Time) {
