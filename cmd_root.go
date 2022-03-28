@@ -111,7 +111,7 @@ func handleRoot(env EnvRoot) error {
 			fmt.Println()
 			continue
 		}
-		if errors.Is(err, ImpossibleJobError{}) {
+		if errors.Is(err, job.ImpossibleJobError{}) {
 			job.PrintUnsuccessful("", nil)
 			fmt.Println()
 			continue
@@ -129,7 +129,9 @@ func handleRoot(env EnvRoot) error {
 		handledJobs++
 		diff := time.Now().Sub(start).Round(time.Second)
 		if err != nil {
-			log.Error().Err(err).Str("filename", j.Metadata().Name).Msg("could not handle job")
+			if _, ok := err.(job.ImpossibleJobError); !ok {
+				log.Error().Err(err).Str("filename", j.Metadata().Name).Msg("could not handle job")
+			}
 			job.PrintUnsuccessful("", &diff)
 			fmt.Println()
 			continue
@@ -198,17 +200,21 @@ func handleJobPreparation(j job.Job, env EnvRoot, index, count int) error {
 
 	if env.UnattendedOnly {
 		possible, err := job.IsPossible(j)
+		if errors.Is(err, job.ImpossibleJobError{}) {
+			return err
+		}
 		if err != nil {
-			return NewImpossibleJobError(err)
+			return job.NewImpossibleJobError(err, false)
 		}
 		if !possible {
-			return NewImpossibleJobError(nil)
+			return job.NewImpossibleJobError(nil, false)
 		}
 	}
 
 	var (
 		possible bool
 		jobError error
+		again    bool
 	)
 	for {
 		possible, jobError = job.IsPossible(j)
@@ -223,15 +229,18 @@ func handleJobPreparation(j job.Job, env EnvRoot, index, count int) error {
 		if jobError != nil {
 			fmt.Println(jobError)
 		} else if !possible {
-			fmt.Println("job not possible")
+			fmt.Println("no further details")
 		}
 
-		again, err := interview.Confirm("Try again?", false)
-		if err != nil {
-			return err
+		again = false
+		if errors.Is(err, job.ImpossibleJobError{}) && err.(job.ImpossibleJobError).IsFixable() {
+			again, err = interview.Confirm("Try again?", false)
+			if err != nil {
+				return err
+			}
 		}
 		if !again {
-			return NewImpossibleJobError(jobError)
+			return job.NewImpossibleJobError(jobError, false)
 		}
 	}
 
@@ -260,11 +269,14 @@ func handleJobExecution(j job.Job, env EnvRoot) error {
 
 	// is this job possible?
 	possible, err := job.IsPossible(j)
+	if e, ok := err.(job.ImpossibleJobError); ok {
+		return e
+	}
 	if err != nil {
-		return NewImpossibleJobError(err)
+		return job.NewImpossibleJobError(err, false)
 	}
 	if !possible {
-		return NewImpossibleJobError(nil)
+		return job.NewImpossibleJobError(nil, false)
 	}
 
 	if !env.DryRun {

@@ -8,7 +8,6 @@ import (
 	"github.com/muesli/termenv"
 	"github.com/xeonx/timeago"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -117,7 +116,7 @@ func IsPossible(j Job) (bool, error) {
 			return false, err
 		}
 		if !pr.Successful() {
-			return false, fmt.Errorf(strings.TrimSpace(pr.Error()))
+			return false, NewImpossibleJobErrorFromProcessResult(pr)
 		}
 	}
 	return true, nil
