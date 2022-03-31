@@ -43,13 +43,14 @@ func handleAssert(env EnvAssert) (error, exit.Code) {
 	setLoggerVerbosity(env.Verbose)
 
 	handlerMap := map[string]func([]string) (error, exit.Code){
-		"command-exists": assert.CommandExists,
-		"file-exists":    assert.FileExists,
-		"dir-exists":     assert.DirExists,
-		"mounted":        assert.Mounted,
-		"non-empty-dir":  assert.NonEmptyDir,
-		"ssh-reachable":  assert.SSHReachable,
-		"weekday":        assert.Weekday,
+		"command-exists":               assert.CommandExists,
+		"file-exists":                  assert.FileExists,
+		"dir-exists":                   assert.DirExists,
+		"mounted":                      assert.Mounted,
+		"non-empty-dir":                assert.NonEmptyDir,
+		"ssh-reachable":                assert.SSHReachable,
+		"ssh-reachable-noninteractive": assert.SSHReachableNonInteractive,
+		"weekday":                      assert.Weekday,
 	}
 
 	cmd := env.Command
