@@ -233,10 +233,15 @@ func handleJobPreparation(j job.Job, env EnvRoot, index, count int) error {
 		}
 
 		again = false
-		if errors.Is(err, job.ImpossibleJobError{}) && err.(job.ImpossibleJobError).IsFixable() {
-			again, err = interview.Confirm("Try again?", false)
-			if err != nil {
-				return err
+		if e, ok := jobError.(job.ImpossibleJobError); ok {
+			var jobErr job.ImpossibleJobError
+			if errors.As(e, &jobErr) {
+				if jobErr.IsFixable() {
+					again, err = interview.Confirm("Try again?", false)
+					if err != nil {
+						return err
+					}
+				}
 			}
 		}
 		if !again {

@@ -38,3 +38,22 @@ func (x ImpossibleJobError) Error() string {
 	}
 	return fmt.Sprintf("%s", x.base.Error())
 }
+
+func (x ImpossibleJobError) Unwrap() error {
+	return x.base // Returns inner error
+}
+
+func (x *ImpossibleJobError) Is(target error) bool {
+	_, ok := target.(*ImpossibleJobError)
+	return ok
+}
+
+func (x *ImpossibleJobError) As(t any) bool {
+	fmt.Println("checking as")
+	_, ok := t.(*ImpossibleJobError)
+	if !ok {
+		return false
+	}
+	t = x
+	return true
+}
