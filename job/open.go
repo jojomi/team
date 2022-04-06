@@ -5,6 +5,7 @@ import (
 	"github.com/jojomi/go-script/v2"
 	"net/url"
 	"os"
+	"runtime"
 
 	"github.com/jojomi/go-script/v2/interview"
 	"github.com/juju/errors"
@@ -64,7 +65,7 @@ func (x *OpenJob) Execute(options ExecutionOptions) error {
 				fmt.Printf("opening URL %s...\n", t)
 				continue
 			}
-			err := browser.OpenURL(t)
+			err := openURLDefaultBrowser(t)
 			if err != nil {
 				return err
 			}
@@ -135,4 +136,31 @@ func (x OpenJob) isValidUrl(toTest string) bool {
 	}
 
 	return true
+}
+
+// open opens the specified URL in the default browser of the user.
+func openURLDefaultBrowser(url string) error {
+	l := script.NewLocalCommand()
+
+	switch runtime.GOOS {
+	case "windows":
+		l.AddAll("cmd", "/c", "start")
+	case "darwin":
+		l.Add("open")
+	default: // "linux", "freebsd", "openbsd", "netbsd"
+		l.Add("xdg-open")
+	}
+	l.Add(url)
+
+	sc := script.NewContext()
+	pr, err := sc.ExecuteFullySilent(l)
+
+	if err != nil {
+		return err
+	}
+	if !pr.Successful() {
+		return fmt.Errorf("could not open url %s", url)
+	}
+
+	return nil
 }
