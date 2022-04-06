@@ -51,6 +51,7 @@ func handleAssert(env EnvAssert) (error, exit.Code) {
 		"ssh-reachable":                assert.SSHReachable,
 		"ssh-reachable-noninteractive": assert.SSHReachableNonInteractive,
 		"weekday":                      assert.Weekday,
+		"day-of-month":                 assert.DayOfMonth,
 	}
 
 	cmd := env.Command
