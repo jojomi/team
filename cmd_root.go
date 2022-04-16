@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/jojomi/team/persistance"
 	"os"
 	"os/signal"
@@ -11,7 +12,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/AlecAivazis/survey/v2/terminal"
 	"github.com/PaesslerAG/gval"
 	"github.com/google/uuid"
 	"github.com/iancoleman/strcase"
@@ -53,8 +53,24 @@ func getRootCmd() *cobra.Command {
 }
 
 func handleRootCmd(cmd *cobra.Command, args []string) {
+	var err error
+	/*ignoreAction := &interview.Action{
+		Label: "Ignore",
+	}
+	executeAction := &interview.Action{
+		Label: "ignore",
+	}
+	actions := []*interview.Action{
+		ignoreAction,
+		executeAction,
+	}
+	actions = interview.WithAutoShortcuts(actions)
+	a, err := interview.SelectActionWithDefault(actions, executeAction)
+	fmt.Println(a, err)
+	os.Exit(1)*/
+
 	env := EnvRoot{}
-	err := env.ParseFrom(cmd, args)
+	err = env.ParseFrom(cmd, args)
 	if err != nil {
 		log.Fatal().Err(err).Msg("could not parse command")
 	}
@@ -251,12 +267,49 @@ func handleJobPreparation(j job.Job, env EnvRoot, index, count int) error {
 
 	doExec := true
 	if env.Manual {
-		doExec, err = interview.Confirm("Aufgabe ausführen?", env.DefaultYes)
+		executeAction := &interview.Action{
+			Label: "Execute",
+		}
+		doneAction := &interview.Action{
+			Label: "Done",
+		}
+		skipAction := &interview.Action{
+			Label: "Skip",
+		}
+		actions := []*interview.Action{
+			executeAction,
+			doneAction,
+			skipAction,
+		}
+
+		defaultAction := skipAction
+		if env.DefaultYes {
+			defaultAction = executeAction
+		}
+
+		actions = interview.WithAutoShortcuts(actions)
+		action, err := interview.SelectActionWithDefault(actions, defaultAction)
+		// doExec, err = interview.Confirm("Aufgabe ausführen?", env.DefaultYes)
 		if errors.Is(err, terminal.InterruptErr) {
 			return UserInterruptedError{}
 		}
 		if err != nil {
 			log.Error().Err(err).Msg("")
+		}
+
+		switch action {
+		case skipAction:
+			doExec = false
+		case doneAction:
+			runUUID, err := logJobExecutionStart(j)
+			if err != nil {
+				return jujuErrors.Annotatef(err, "could not log run for job %s", j.Metadata().Name)
+			}
+			err = logJobExecution(runUUID, j, nil, "[no observed run, manual log entry]")
+			if err != nil {
+				return jujuErrors.Annotatef(err, "could not log run for job %s", j.Metadata().Name)
+			}
+			doExec = false
 		}
 	}
 
