@@ -2,10 +2,11 @@ package job
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/jojomi/go-script/v2"
 	"github.com/juju/errors"
 	"gopkg.in/yaml.v2"
-	"os"
 )
 
 type FeedDownloadJob struct {
@@ -74,7 +75,7 @@ func (x *FeedDownloadJob) Execute(options ExecutionOptions) error {
 
 	debugCommand(cm, options)
 
-	executor := getExecutorByOutputType(x.Metadata().Output)
+	executor := getExecutorByOutputType(x.Metadata().Output, nil)
 
 	pr, err := executor(cm)
 	if err != nil {

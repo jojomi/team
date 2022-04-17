@@ -2,17 +2,20 @@ package job
 
 import (
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/jojomi/go-script/v2"
 	"github.com/jojomi/go-script/v2/print"
 	jujuErrors "github.com/juju/errors"
 	"github.com/muesli/termenv"
 	"github.com/xeonx/timeago"
-	"net/http"
-	"time"
 )
 
-func getExecutorByOutputType(output string) func(command script.Command) (pr *script.ProcessResult, err error) {
-	sc := script.NewContext()
+func getExecutorByOutputType(output string, sc *script.Context) func(command script.Command) (pr *script.ProcessResult, err error) {
+	if sc == nil {
+		sc = script.NewContext()
+	}
 	if output == "debug" || output == "" {
 		return sc.ExecuteDebug
 	}
