@@ -6,6 +6,7 @@ import (
 	"github.com/jojomi/team/exit"
 	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -52,13 +53,23 @@ func handleAssert(env EnvAssert) (error, exit.Code) {
 		"ssh-reachable-noninteractive": assert.SSHReachableNonInteractive,
 		"weekday":                      assert.Weekday,
 		"day-of-month":                 assert.DayOfMonth,
+		"time-before":                  assert.TimeBefore,
+		"time-after":                   assert.TimeAfter,
 	}
 
 	cmd := env.Command
 	f, ok := handlerMap[cmd]
 	if !ok {
-		return fmt.Errorf("assert handler not found: %s", cmd), exit.CodeErrorFinal
+		return fmt.Errorf("assert handler not found: %s. Existing handlers: %s", cmd, strings.Join(getMapKeys(handlerMap), ", ")), exit.CodeErrorFinal
 	}
 
 	return f(env.Args)
+}
+
+func getMapKeys(input map[string]func([]string) (error, exit.Code)) []string {
+	var result = make([]string, 0)
+	for k := range input {
+		result = append(result, k)
+	}
+	return result
 }
