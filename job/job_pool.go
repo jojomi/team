@@ -1,6 +1,7 @@
 package job
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -39,6 +40,29 @@ func (x *Pool) PossibleOnly() *Pool {
 		}
 		return possible
 	})
+	return NewJobPoolWithJobs(filteredJobs)
+}
+
+func (x *Pool) PossibleOrFixableOnly() *Pool {
+	filteredJobs := arrayMap[Job](x.jobs, func(job Job) bool {
+		possible, err := IsPossible(job)
+
+		if possible {
+			return true
+		}
+
+		if e, ok := err.(ImpossibleJobError); ok {
+			var jobErr ImpossibleJobError
+			if errors.As(e, &jobErr) {
+				if jobErr.IsFixable() {
+					return true
+				}
+			}
+			return false
+		}
+		return false
+	})
+
 	return NewJobPoolWithJobs(filteredJobs)
 }
 

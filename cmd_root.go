@@ -46,6 +46,7 @@ func getRootCmd() *cobra.Command {
 	f.BoolP("possible-only", "p", false, "only offer jobs that are currently possible")
 	f.BoolP("skip-time-check", "t", false, "don't check if the job is required by time")
 	f.BoolP("attended-first", "a", false, "optimize to do attended tasks as early as possible") // TODO implement
+	f.Bool("show-unfixable", false, "show jobs that did not execute because of unfixable problems")
 	f.BoolP("dry-run", "d", false, "prevent destructive operations")
 	f.Bool("shutdown", false, "shutdown after completing (with a timeout, so you can stop it)")
 
@@ -54,21 +55,6 @@ func getRootCmd() *cobra.Command {
 
 func handleRootCmd(cmd *cobra.Command, args []string) {
 	var err error
-	/*ignoreAction := &interview.Action{
-		Label: "Ignore",
-	}
-	executeAction := &interview.Action{
-		Label: "ignore",
-	}
-	actions := []*interview.Action{
-		ignoreAction,
-		executeAction,
-	}
-	actions = interview.WithAutoShortcuts(actions)
-	a, err := interview.SelectActionWithDefault(actions, executeAction)
-	fmt.Println(a, err)
-	os.Exit(1)*/
-
 	env := EnvRoot{}
 	err = env.ParseFrom(cmd, args)
 	if err != nil {
@@ -92,6 +78,9 @@ func handleRoot(env EnvRoot) error {
 	}
 	if env.PossibleOnly {
 		pool = pool.PossibleOnly()
+	}
+	if !env.ShowUnfixable {
+		pool = pool.PossibleOrFixableOnly()
 	}
 
 	// filter
