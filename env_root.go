@@ -13,6 +13,7 @@ type EnvRoot struct {
 	DefaultYes     bool
 	UnattendedOnly bool
 	PossibleOnly   bool
+	Fixable        bool
 	Shutdown       bool
 	SelectFirst    bool
 	ShowUnfixable  bool
@@ -59,6 +60,10 @@ func (e *EnvRoot) ParseFrom(command *cobra.Command, _ []string) error {
 		return err
 	}
 	e.PossibleOnly, err = command.Flags().GetBool("possible-only")
+	if err != nil {
+		return err
+	}
+	e.Fixable, err = command.Flags().GetBool("fixable")
 	if err != nil {
 		return err
 	}

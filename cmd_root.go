@@ -44,6 +44,7 @@ func getRootCmd() *cobra.Command {
 	f.BoolP("default-yes", "y", false, "set default answer to yes")
 	f.BoolP("unattended-only", "u", false, "only offer jobs that run unattendedly")
 	f.BoolP("possible-only", "p", false, "only offer jobs that are currently possible")
+	f.BoolP("fixable", "f", true, "only offer jobs that are currently possible or fixable")
 	f.BoolP("skip-time-check", "t", false, "don't check if the job is required by time")
 	f.BoolP("attended-first", "a", false, "optimize to do attended tasks as early as possible") // TODO implement
 	f.Bool("show-unfixable", false, "show jobs that did not execute because of unfixable problems")
