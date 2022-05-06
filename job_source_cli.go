@@ -13,8 +13,8 @@ import (
 )
 
 func addJobSourceFlags(f *pflag.FlagSet) {
-	f.StringP("job-dir", "j", "~/.team/jobs", "directory with the job files")
-	f.String("job-file", "", "handle only one specific job file")
+	f.String("job-dir", "~/.team/jobs", "directory with the job files")
+	f.StringP("job-file", "j", "", "handle only one specific job file")
 }
 
 func getCLIPool(jobDir, jobFile string) *job.Pool {
