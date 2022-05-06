@@ -99,7 +99,7 @@ func (x *OpenJob) Execute(options ExecutionOptions) error {
 		}
 	}
 
-	if x.Wait {
+	if x.Wait && options.Wait {
 		done, err := interview.Confirm("Task done?", false)
 		if err != nil {
 			return err

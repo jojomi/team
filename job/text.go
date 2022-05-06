@@ -59,7 +59,7 @@ func (x *TextJob) Execute(options ExecutionOptions) error {
 	fmt.Println("")
 	fmt.Println(x.Text)
 
-	if x.Wait {
+	if x.Wait && options.Wait {
 		done, err := interview.Confirm("Task done?", false)
 		if err != nil {
 			return err

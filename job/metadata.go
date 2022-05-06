@@ -2,7 +2,9 @@ package job
 
 import "time"
 
-var defaultWeight = 0
+const (
+	defaultWeight = 0
+)
 
 type Metadata struct {
 	JobType     string `yaml:"type"`

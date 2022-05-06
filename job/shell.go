@@ -111,7 +111,7 @@ func (x *ShellJob) Execute(options ExecutionOptions) error {
 		return fmt.Errorf("unsuccessful command: %s", cmd.String())
 	}
 
-	if x.Wait {
+	if x.Wait && options.Wait {
 		done, err := interview.Confirm("Task done?", false)
 		if err != nil {
 			return err

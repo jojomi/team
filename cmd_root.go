@@ -70,6 +70,10 @@ func handleRootCmd(cmd *cobra.Command, args []string) {
 func handleRoot(env EnvRoot) error {
 	setLoggerVerbosity(env.Verbose)
 
+	var (
+		executionOptionMap = make(map[job.Job]job.ExecutionOptions, 0)
+	)
+
 	totalStart := time.Now()
 	handledJobs := 0
 
@@ -106,9 +110,8 @@ func handleRoot(env EnvRoot) error {
 
 	// loop relevant jobs in order
 	poolSize := len(requiredPool.Jobs())
-	var err error
 	for i, j := range requiredPool.Jobs() {
-		err = handleJobPreparation(j, env, i, poolSize)
+		executionOptions, err := handleJobPreparation(j, env, i, poolSize)
 		if errors.Is(err, UserInterruptedError{}) {
 			fmt.Println()
 			break
@@ -117,21 +120,26 @@ func handleRoot(env EnvRoot) error {
 			fmt.Println()
 			continue
 		}
+		if executionOptions.SkipExecution {
+			fmt.Println()
+			continue
+		}
 		if errors.Is(err, job.ImpossibleJobError{}) {
 			job.PrintUnsuccessful("", nil)
 			fmt.Println()
 			continue
 		}
+		executionOptionMap[j] = executionOptions
 
 		// execute now or later?
-		if env.SelectFirst {
+		if env.SelectFirst || executionOptions.Delay {
 			delayedJobs.AddJob(j)
 			fmt.Println()
 			continue
 		}
 
 		start := time.Now()
-		err = handleJobExecution(j, env)
+		err = handleJobExecution(j, executionOptions, env)
 		handledJobs++
 		diff := time.Now().Sub(start).Round(time.Second)
 		if err != nil {
@@ -147,7 +155,7 @@ func handleRoot(env EnvRoot) error {
 	}
 
 	// execution now if it was delayed
-	if env.SelectFirst {
+	if len(delayedJobs.Jobs()) > 0 {
 		var (
 			count = len(delayedJobs.Jobs())
 			err   error
@@ -163,7 +171,18 @@ func handleRoot(env EnvRoot) error {
 			fmt.Println()
 
 			start := time.Now()
-			err = handleJobExecution(j, env)
+
+			executionOptions, ok := executionOptionMap[j]
+			if !ok {
+				executionOptions = job.ExecutionOptions{
+					Wait:          true,
+					SkipExecution: false,
+					DryRun:        env.DryRun,
+					Verbose:       env.Verbose,
+				}
+			}
+
+			err = handleJobExecution(j, executionOptions, env)
 			handledJobs++
 			diff := time.Now().Sub(start).Round(time.Second)
 			if errors.Is(err, UserInterruptedError{}) {
@@ -195,11 +214,20 @@ func handleRoot(env EnvRoot) error {
 	return nil
 }
 
-func handleJobPreparation(j job.Job, env EnvRoot, index, count int) error {
+func handleJobPreparation(j job.Job, env EnvRoot, index, count int) (job.ExecutionOptions, error) {
+	opts := job.ExecutionOptions{
+		SkipExecution: true,
+		Delay:         false,
+		Wait:          true,
+
+		DryRun:  env.DryRun,
+		Verbose: env.Verbose,
+	}
+
 	print.Boldf("[%d/%d] ", index+1, count)
 	next, err := getJobNextDate(j)
 	if err != nil {
-		log.Fatal().Err(err).Msg("could not get next execution date")
+		return opts, errors.New("could not get next execution date")
 	}
 	job.PrintHeader(j, &next)
 	fmt.Println()
@@ -207,13 +235,13 @@ func handleJobPreparation(j job.Job, env EnvRoot, index, count int) error {
 	if env.UnattendedOnly {
 		possible, err := job.IsPossible(j)
 		if errors.Is(err, job.ImpossibleJobError{}) {
-			return err
+			return opts, err
 		}
 		if err != nil {
-			return job.NewImpossibleJobError(err, false)
+			return opts, job.NewImpossibleJobError(err, false)
 		}
 		if !possible {
-			return job.NewImpossibleJobError(nil, false)
+			return opts, job.NewImpossibleJobError(nil, false)
 		}
 	}
 
@@ -245,17 +273,18 @@ func handleJobPreparation(j job.Job, env EnvRoot, index, count int) error {
 				if jobErr.IsFixable() {
 					again, err = interview.Confirm("Try again?", false)
 					if err != nil {
-						return err
+						return opts, err
 					}
 				}
 			}
 		}
 		if !again {
-			return job.NewImpossibleJobError(jobError, false)
+			return opts, job.NewImpossibleJobError(jobError, false)
 		}
 	}
 
 	doExec := true
+	autoLog := false
 	if env.Manual {
 		executeAction := &interview.Action{
 			Label: "Execute",
@@ -263,12 +292,20 @@ func handleJobPreparation(j job.Job, env EnvRoot, index, count int) error {
 		doneAction := &interview.Action{
 			Label: "Done",
 		}
+		executeAndDoneAction := &interview.Action{
+			Label: "Execute and done",
+		}
+		doLaterAction := &interview.Action{
+			Label: "Do Later",
+		}
 		skipAction := &interview.Action{
 			Label: "Skip",
 		}
 		actions := []*interview.Action{
 			executeAction,
 			doneAction,
+			executeAndDoneAction,
+			doLaterAction,
 			skipAction,
 		}
 
@@ -281,7 +318,7 @@ func handleJobPreparation(j job.Job, env EnvRoot, index, count int) error {
 		action, err := interview.SelectActionWithDefault(actions, defaultAction)
 		// doExec, err = interview.Confirm("Aufgabe ausführen?", env.DefaultYes)
 		if errors.Is(err, terminal.InterruptErr) {
-			return UserInterruptedError{}
+			return opts, UserInterruptedError{}
 		}
 		if err != nil {
 			log.Error().Err(err).Msg("")
@@ -290,26 +327,24 @@ func handleJobPreparation(j job.Job, env EnvRoot, index, count int) error {
 		switch action {
 		case skipAction:
 			doExec = false
+		case executeAndDoneAction:
+			autoLog = true
+			doExec = true
 		case doneAction:
-			runUUID, err := logJobExecutionStart(j)
-			if err != nil {
-				return jujuErrors.Annotatef(err, "could not log run for job %s", j.Metadata().Name)
-			}
-			err = logJobExecution(runUUID, j, nil, "[no observed run, manual log entry]")
-			if err != nil {
-				return jujuErrors.Annotatef(err, "could not log run for job %s", j.Metadata().Name)
-			}
+			autoLog = true
 			doExec = false
+		case doLaterAction:
+			opts.Delay = true
 		}
 	}
 
-	if !doExec {
-		return UserAbortedError{}
-	}
-	return nil
+	opts.SkipExecution = !doExec
+	opts.Wait = !autoLog
+
+	return opts, nil
 }
 
-func handleJobExecution(j job.Job, env EnvRoot) error {
+func handleJobExecution(j job.Job, executionOptions job.ExecutionOptions, env EnvRoot) error {
 	var (
 		err error
 		id  uuid.UUID
@@ -340,10 +375,7 @@ func handleJobExecution(j job.Job, env EnvRoot) error {
 		return jujuErrors.Annotate(err, "could not pre")
 	}
 
-	err = j.Execute(job.ExecutionOptions{
-		DryRun:  env.DryRun,
-		Verbose: env.Verbose,
-	})
+	err = j.Execute(executionOptions)
 
 	if !env.DryRun {
 		logError := logJobExecution(id, j, err, "" /* TODO */)
