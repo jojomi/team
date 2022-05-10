@@ -120,7 +120,7 @@ func handleRoot(env EnvRoot) error {
 			fmt.Println()
 			continue
 		}
-		if executionOptions.SkipExecution {
+		if executionOptions.ExecutionPlan == job.ExecutionPlanSkip {
 			fmt.Println()
 			continue
 		}
@@ -176,7 +176,7 @@ func handleRoot(env EnvRoot) error {
 			if !ok {
 				executionOptions = job.ExecutionOptions{
 					Wait:          true,
-					SkipExecution: false,
+					ExecutionPlan: job.ExecutionPlanExecute,
 					DryRun:        env.DryRun,
 					Verbose:       env.Verbose,
 				}
@@ -216,7 +216,7 @@ func handleRoot(env EnvRoot) error {
 
 func handleJobPreparation(j job.Job, env EnvRoot, index, count int) (job.ExecutionOptions, error) {
 	opts := job.ExecutionOptions{
-		SkipExecution: true,
+		ExecutionPlan: job.ExecutionPlanExecute,
 		Delay:         false,
 		Wait:          true,
 
@@ -283,7 +283,6 @@ func handleJobPreparation(j job.Job, env EnvRoot, index, count int) (job.Executi
 		}
 	}
 
-	doExec := true
 	autoLog := false
 	if env.Manual {
 		executeAction := &interview.Action{
@@ -326,19 +325,18 @@ func handleJobPreparation(j job.Job, env EnvRoot, index, count int) (job.Executi
 
 		switch action {
 		case skipAction:
-			doExec = false
+			opts.ExecutionPlan = job.ExecutionPlanSkip
 		case executeAndDoneAction:
 			autoLog = true
-			doExec = true
+			opts.ExecutionPlan = job.ExecutionPlanLogDone
 		case doneAction:
 			autoLog = true
-			doExec = false
+			opts.ExecutionPlan = job.ExecutionPlanLogDone
 		case doLaterAction:
 			opts.Delay = true
 		}
 	}
 
-	opts.SkipExecution = !doExec
 	opts.Wait = !autoLog
 
 	return opts, nil
@@ -369,13 +367,21 @@ func handleJobExecution(j job.Job, executionOptions job.ExecutionOptions, env En
 		}
 	}
 
-	err = j.Pre()
-	if err != nil {
-		// TODO log
-		return jujuErrors.Annotate(err, "could not pre")
-	}
+	if executionOptions.ExecutionPlan == job.ExecutionPlanExecute {
+		err = j.Pre()
+		if err != nil {
+			// TODO log
+			return jujuErrors.Annotate(err, "could not pre")
+		}
 
-	err = j.Execute(executionOptions)
+		err = j.Execute(executionOptions)
+
+		err = j.Post()
+		if err != nil {
+			// TODO log
+			return jujuErrors.Annotate(err, "could not post")
+		}
+	}
 
 	if !env.DryRun {
 		logError := logJobExecution(id, j, err, "" /* TODO */)
@@ -386,12 +392,6 @@ func handleJobExecution(j job.Job, executionOptions job.ExecutionOptions, env En
 
 	if err != nil {
 		return jujuErrors.Annotate(err, "could not execute")
-	}
-
-	err = j.Post()
-	if err != nil {
-		// TODO log
-		return jujuErrors.Annotate(err, "could not post")
 	}
 
 	return nil

@@ -1,7 +1,7 @@
 package job
 
 type ExecutionOptions struct {
-	SkipExecution bool
+	ExecutionPlan ExecutionPlan
 	Delay         bool
 	Wait          bool
 
