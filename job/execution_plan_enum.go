@@ -41,7 +41,7 @@ var _ExecutionPlanValue = map[string]ExecutionPlan{
 	_ExecutionPlanName[11:18]: ExecutionPlanExecute,
 }
 
-// ParseExecutionPlan attempts to convert a string to a ExecutionPlan.
+// ParseExecutionPlan attempts to convert a string to a ExecutionPlan
 func ParseExecutionPlan(name string) (ExecutionPlan, error) {
 	if x, ok := _ExecutionPlanValue[name]; ok {
 		return x, nil

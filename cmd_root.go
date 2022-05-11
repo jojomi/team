@@ -283,7 +283,6 @@ func handleJobPreparation(j job.Job, env EnvRoot, index, count int) (job.Executi
 		}
 	}
 
-	autoLog := false
 	if env.Manual {
 		executeAction := &interview.Action{
 			Label: "Execute",
@@ -327,17 +326,15 @@ func handleJobPreparation(j job.Job, env EnvRoot, index, count int) (job.Executi
 		case skipAction:
 			opts.ExecutionPlan = job.ExecutionPlanSkip
 		case executeAndDoneAction:
-			autoLog = true
-			opts.ExecutionPlan = job.ExecutionPlanLogDone
+			opts.Wait = false
+			opts.ExecutionPlan = job.ExecutionPlanExecute
 		case doneAction:
-			autoLog = true
+			opts.Wait = false
 			opts.ExecutionPlan = job.ExecutionPlanLogDone
 		case doLaterAction:
 			opts.Delay = true
 		}
 	}
-
-	opts.Wait = !autoLog
 
 	return opts, nil
 }
