@@ -165,6 +165,8 @@ github.com/inconshreveable/mousetrap v1.0.0 h1:Z8tu5sraLXCXIcARxBp/8cbvlwVa7Z1NH
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
 github.com/jinzhu/now v1.1.5 h1:/o9tlHleP7gOFmsnYNz3RGnqzefHA47wQpKrrdTIwXQ=
 github.com/jinzhu/now v1.1.5/go.mod h1:d3SSVoowX0Lcu0IBviAWJpolVfI5UJVZZ7cO71lE/z8=
+github.com/jojomi/assert v0.0.0-20220523201550-4e6cfc563076 h1:LVC/joszKPiOu3+3U8aaoOMVs7ugTgbWOYRxad0lKeU=
+github.com/jojomi/assert v0.0.0-20220523201550-4e6cfc563076/go.mod h1:XzDAPMzhdzXnhAsYS8vRjhq+ox/L+y2APY+GgHGxQJM=
 github.com/jojomi/go-script/v2 v2.3.1 h1:UBmp8XV2xZKUQXxChyhjJWt8cv0tD4+h10NnxWyxJuA=
 github.com/jojomi/go-script/v2 v2.3.1/go.mod h1:Cqf4K/WytIHBlzk1svh6ibx+BSdYWuaoU9xLy+omm6E=
 github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024/go.mod h1:6v2b51hI/fHJwM22ozAgKL4VKDeJcHhJFhtBdhmNjmU=

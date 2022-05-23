@@ -31,7 +31,7 @@ func getRootCmd() *cobra.Command {
 		Run: handleRootCmd,
 	}
 
-	cmd.AddCommand(getVersionCmd(), getHealthCmd(), getAssertCmd())
+	cmd.AddCommand(getVersionCmd(), getHealthCmd())
 
 	pf := cmd.PersistentFlags()
 	pf.BoolP("verbose", "v", false, "activate verbose output")

@@ -11,7 +11,7 @@ func main() {
 	rootCmd := getRootCmd()
 
 	// add version command
-	rootCmd.AddCommand(getVersionCmd(), getAssertCmd())
+	rootCmd.AddCommand(getVersionCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal().Err(err).Msg("")

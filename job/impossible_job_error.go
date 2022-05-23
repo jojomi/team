@@ -2,8 +2,8 @@ package job
 
 import (
 	"fmt"
+	"github.com/jojomi/assert/exit"
 	"github.com/jojomi/go-script/v2"
-	"github.com/jojomi/team/exit"
 	"github.com/juju/errors"
 	"strings"
 )
