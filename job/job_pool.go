@@ -89,12 +89,18 @@ func (x *Pool) EnabledOnly() *Pool {
 	return NewJobPoolWithJobs(filteredJobs)
 }
 
-func (x *Pool) ByWeight() *Pool {
+func (x *Pool) SortedBy(lessFunc func(j1, j2 Job) bool) *Pool {
 	sortedJobs := x.jobs
 	sort.SliceStable(sortedJobs, func(i, j int) bool {
-		return x.jobs[i].Metadata().GetWeight() > x.jobs[j].Metadata().GetWeight()
+		return lessFunc(x.jobs[i], x.jobs[j])
 	})
 	return NewJobPoolWithJobs(sortedJobs)
+}
+
+func (x *Pool) ByWeight() *Pool {
+	return x.SortedBy(func(j1, j2 Job) bool {
+		return j1.Metadata().GetWeight() > j2.Metadata().GetWeight()
+	})
 }
 
 func arrayMap[T any](input []T, keep func(item T) bool) []T {
