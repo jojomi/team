@@ -11,7 +11,7 @@ require (
 	github.com/iancoleman/strcase v0.2.0
 	github.com/jinzhu/now v1.1.5
 	github.com/jojomi/go-script/v2 v2.3.1
-	github.com/juju/errors v0.0.0-20220308003724-1b7da785453a
+	github.com/juju/errors v0.0.0-20220331221717-b38fca44723b
 	github.com/mattn/go-sqlite3 v1.14.12
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/muesli/termenv v0.11.0
@@ -34,7 +34,7 @@ require (
 	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/hashicorp/hcl/v2 v2.11.1 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
-	github.com/jojomi/assert v0.0.0-20220523201550-4e6cfc563076 // indirect
+	github.com/jojomi/assert v0.0.0-20220523205055-8f08d6e2e520 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
@@ -47,11 +47,11 @@ require (
 	github.com/rogpeppe/go-internal v1.8.1-0.20211023094830-115ce09fd6b4 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/zclconf/go-cty v1.10.0 // indirect
-	golang.org/x/crypto v0.0.0-20220313003712-b769efc7c000 // indirect
+	golang.org/x/crypto v0.0.0-20220518034528-6f7dac969898 // indirect
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f // indirect
-	golang.org/x/sys v0.0.0-20220310020820-b874c991c1a5 // indirect
-	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
+	golang.org/x/term v0.0.0-20220411215600-e5f449aeb171 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/cheggaaa/pb.v1 v1.0.28 // indirect
 )
