@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/AlecAivazis/survey/v2/terminal"
-	"github.com/jojomi/team/persistance"
 	"os"
 	"os/signal"
 	"regexp"
 	"strconv"
 	"time"
+
+	"github.com/AlecAivazis/survey/v2/terminal"
+	"github.com/jojomi/team/persistance"
 
 	"github.com/PaesslerAG/gval"
 	"github.com/google/uuid"
@@ -31,7 +32,7 @@ func getRootCmd() *cobra.Command {
 		Run: handleRootCmd,
 	}
 
-	cmd.AddCommand(getVersionCmd(), getHealthCmd())
+	cmd.AddCommand(getNextCmd(), getHealthCmd(), getVersionCmd())
 
 	pf := cmd.PersistentFlags()
 	pf.BoolP("verbose", "v", false, "activate verbose output")

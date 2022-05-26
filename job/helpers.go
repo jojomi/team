@@ -87,7 +87,7 @@ func PrintHeader(j Job, next *time.Time) {
 	}
 
 	if next != nil {
-		fmt.Printf("\nFällig seit %s (%s)", next.Format(DateFormat), Timeago(*next))
+		fmt.Printf("\nFällig am %s (%s)", next.Format(DateFormat), Timeago(*next))
 	}
 }
 
