@@ -43,7 +43,6 @@ func getRootCmd() *cobra.Command {
 	f.BoolP("manual", "m", true, "go job by job manually")
 	f.BoolP("select-first", "s", false, "first select, then execute jobs")
 	f.BoolP("default-yes", "y", false, "set default answer to yes")
-	f.BoolP("unattended-only", "u", false, "only offer jobs that run unattendedly")
 	f.BoolP("possible-only", "p", false, "only offer jobs that are currently possible")
 	f.BoolP("fixable", "f", true, "only offer jobs that are currently possible or fixable")
 	f.BoolP("skip-time-check", "t", false, "don't check if the job is required by time")
@@ -51,6 +50,10 @@ func getRootCmd() *cobra.Command {
 	f.Bool("show-unfixable", false, "show jobs that did not execute because of unfixable problems")
 	f.BoolP("dry-run", "d", false, "prevent destructive operations")
 	f.Bool("shutdown", false, "shutdown after completing (with a timeout, so you can stop it)")
+
+	f.BoolP("unattended-only", "u", false, "only offer jobs that run unattendedly")
+	f.Bool("attended-only", false, "only offer jobs that need attention")
+	cmd.MarkFlagsMutuallyExclusive("attended-only", "unattended-only")
 
 	return cmd
 }
@@ -81,6 +84,9 @@ func handleRoot(env EnvRoot) error {
 	pool := getCLIPool(env.JobDir, env.JobFile)
 	if env.UnattendedOnly {
 		pool = pool.UnattendedOnly()
+	}
+	if env.AttendedOnly {
+		pool = pool.AttendedOnly()
 	}
 	if env.PossibleOnly {
 		pool = pool.PossibleOnly()

@@ -82,6 +82,13 @@ func (x *Pool) UnattendedOnly() *Pool {
 	return NewJobPoolWithJobs(filteredJobs)
 }
 
+func (x *Pool) AttendedOnly() *Pool {
+	filteredJobs := arrayMap[Job](x.jobs, func(job Job) bool {
+		return !job.Metadata().IsUnattended()
+	})
+	return NewJobPoolWithJobs(filteredJobs)
+}
+
 func (x *Pool) EnabledOnly() *Pool {
 	filteredJobs := arrayMap[Job](x.jobs, func(job Job) bool {
 		return job.Metadata().IsEnabled()
