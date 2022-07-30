@@ -9,8 +9,9 @@ import (
 
 func getNextCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "next",
-		Run: handleNextCmd,
+		Use:   "next",
+		Run:   handleNextCmd,
+		Short: "Show jobs ordered by next execution",
 	}
 
 	// command local flags

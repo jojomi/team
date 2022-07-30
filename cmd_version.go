@@ -9,8 +9,9 @@ import (
 
 func getVersionCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "version",
-		Run: handleVersionCmd,
+		Use:   "version",
+		Run:   handleVersionCmd,
+		Short: "Print version details",
 	}
 	return cmd
 }

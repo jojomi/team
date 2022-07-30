@@ -13,8 +13,9 @@ import (
 
 func getHealthCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use: "health",
-		Run: handleHealthCmd,
+		Use:   "health",
+		Run:   handleHealthCmd,
+		Short: "Show information about jobs and their execution status",
 	}
 
 	f := cmd.Flags()
