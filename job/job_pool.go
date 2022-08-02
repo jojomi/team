@@ -110,6 +110,16 @@ func (x *Pool) ByWeight() *Pool {
 	})
 }
 
+// NeedsSudo checks if any of the Jobs in the Pool needs privileged access
+func (x Pool) NeedsSudo() bool {
+	for _, job := range x.jobs {
+		if s := job.Metadata().Sudo; s != nil && *s == true {
+			return true
+		}
+	}
+	return false
+}
+
 func arrayMap[T any](input []T, keep func(item T) bool) []T {
 	result := make([]T, 0)
 

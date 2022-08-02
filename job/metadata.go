@@ -15,6 +15,7 @@ type Metadata struct {
 	Enabled     *bool    `yaml:"enabled,omitempty"`
 	Next        string   `yaml:"next,omitempty"`
 	Possible    []string `yaml:"possible,omitempty"`
+	Sudo        *bool    `yaml:"sudo,omitempty""`
 
 	Timeout time.Duration // TODO implement
 
