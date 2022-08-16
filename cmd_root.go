@@ -73,6 +73,7 @@ func handleRootCmd(cmd *cobra.Command, args []string) {
 
 func handleRoot(env EnvRoot) error {
 	setLoggerVerbosity(env.Verbose)
+	log.Info().Msg(env.String())
 
 	var (
 		executionOptionMap = make(map[job.Job]job.ExecutionOptions, 0)
@@ -82,6 +83,7 @@ func handleRoot(env EnvRoot) error {
 	handledJobs := 0
 
 	pool := getCLIPool(env.JobDir, env.JobFile)
+	log.Info().Msgf("got %d jobs from dir '%s' and file '%s' (unfiltered)", len(pool.Jobs()), env.JobDir, env.JobFile)
 	if env.UnattendedOnly {
 		pool = pool.UnattendedOnly()
 	}
@@ -94,6 +96,7 @@ func handleRoot(env EnvRoot) error {
 	if !env.ShowUnfixable {
 		pool = pool.PossibleOrFixableOnly()
 	}
+	log.Info().Msgf("got %d jobs after filtering for state", len(pool.Jobs()))
 
 	// filter
 	requiredPool := pool
@@ -112,6 +115,7 @@ func handleRoot(env EnvRoot) error {
 			requiredPool.AddJob(j)
 		}
 	}
+	log.Info().Msgf("got %d jobs after time checking", len(requiredPool.Jobs()))
 
 	delayedJobs := job.NewJobPool()
 

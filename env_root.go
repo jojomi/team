@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 )
@@ -97,4 +99,13 @@ func (e *EnvRoot) ParseFrom(command *cobra.Command, _ []string) error {
 		return err
 	}
 	return nil
+}
+
+func (e *EnvRoot) String() string {
+	out, err := json.Marshal(e)
+	if err != nil {
+		panic(err)
+	}
+
+	return fmt.Sprintf("EnvRoot %s", string(out))
 }
