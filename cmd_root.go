@@ -50,6 +50,7 @@ func getRootCmd() *cobra.Command {
 	f.Bool("show-unfixable", false, "show jobs that did not execute because of unfixable problems")
 	f.BoolP("dry-run", "d", false, "prevent destructive operations")
 	f.Bool("shutdown", false, "shutdown after completing (with a timeout, so you can stop it)")
+	f.BoolP("interactive", "i", false, "interactive job selection/search")
 
 	f.BoolP("unattended-only", "u", false, "only offer jobs that run unattendedly")
 	f.Bool("attended-only", false, "only offer jobs that need attention")
@@ -119,50 +120,54 @@ func handleRoot(env EnvRoot) error {
 
 	delayedJobs := job.NewJobPool()
 
-	// loop relevant jobs in order
-	poolSize := len(requiredPool.Jobs())
-	for i, j := range requiredPool.Jobs() {
-		executionOptions, err := handleJobPreparation(j, env, i, poolSize)
-		if errors.Is(err, UserInterruptedError{}) {
-			fmt.Println()
-			break
-		}
-		if errors.Is(err, UserAbortedError{}) {
-			fmt.Println()
-			continue
-		}
-		if executionOptions.ExecutionPlan == job.ExecutionPlanSkip {
-			fmt.Println()
-			continue
-		}
-		if errors.Is(err, job.ImpossibleJobError{}) {
-			job.PrintUnsuccessful("", nil)
-			fmt.Println()
-			continue
-		}
-		executionOptionMap[j] = executionOptions
-
-		// execute now or later?
-		if env.SelectFirst || executionOptions.Delay {
-			delayedJobs.AddJob(j)
-			fmt.Println()
-			continue
-		}
-
-		start := time.Now()
-		err = handleJobExecution(j, executionOptions, env)
-		handledJobs++
-		diff := time.Now().Sub(start).Round(time.Second)
-		if err != nil {
-			if _, ok := err.(job.ImpossibleJobError); !ok {
-				log.Error().Err(err).Str("filename", j.Metadata().Name).Msg("could not handle job")
+	if env.Interactive {
+		searchJobs(requiredPool, delayedJobs)
+	} else {
+		// loop relevant jobs in order
+		poolSize := len(requiredPool.Jobs())
+		for i, j := range requiredPool.Jobs() {
+			executionOptions, err := handleJobPreparation(j, env, i, poolSize)
+			if errors.Is(err, UserInterruptedError{}) {
+				fmt.Println()
+				break
 			}
-			job.PrintUnsuccessful("", &diff)
+			if errors.Is(err, UserAbortedError{}) {
+				fmt.Println()
+				continue
+			}
+			if executionOptions.ExecutionPlan == job.ExecutionPlanSkip {
+				fmt.Println()
+				continue
+			}
+			if errors.Is(err, job.ImpossibleJobError{}) {
+				job.PrintUnsuccessful("", nil)
+				fmt.Println()
+				continue
+			}
+			executionOptionMap[j] = executionOptions
+
+			// execute now or later?
+			if env.SelectFirst || executionOptions.Delay {
+				delayedJobs.AddJob(j)
+				fmt.Println()
+				continue
+			}
+
+			start := time.Now()
+			err = handleJobExecution(j, executionOptions, env)
+			handledJobs++
+			diff := time.Now().Sub(start).Round(time.Second)
+			if err != nil {
+				if _, ok := err.(job.ImpossibleJobError); !ok {
+					log.Error().Err(err).Str("filename", j.Metadata().Name).Msg("could not handle job")
+				}
+				job.PrintUnsuccessful("", &diff)
+				fmt.Println()
+				continue
+			}
+			job.PrintSuccessful("", &diff)
 			fmt.Println()
-			continue
 		}
-		job.PrintSuccessful("", &diff)
-		fmt.Println()
 	}
 
 	// execution now if it was delayed
@@ -223,6 +228,28 @@ func handleRoot(env EnvRoot) error {
 	}
 
 	return nil
+}
+
+func searchJobs(pool *job.Pool, execute *job.Pool) {
+	jobs := pool.Jobs()
+	options := make([]string, len(jobs))
+
+	for i, job := range jobs {
+		options[i] = job.Metadata().Name
+	}
+
+	selected, err := interview.ChooseMultiStrings("Select jobs to be executed:", options)
+	if err != nil {
+		return
+	}
+
+	for _, singleSelection := range selected {
+		for _, job := range jobs {
+			if singleSelection == job.Metadata().Name {
+				execute.AddJob(job)
+			}
+		}
+	}
 }
 
 func handleJobPreparation(j job.Job, env EnvRoot, index, count int) (job.ExecutionOptions, error) {
