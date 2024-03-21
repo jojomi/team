@@ -53,6 +53,8 @@ github.com/jojomi/assert v0.0.0-20230426204417-7cee44b4d7e3 h1:m4p5ryYfY2IbxHFVZ
 github.com/jojomi/assert v0.0.0-20230426204417-7cee44b4d7e3/go.mod h1:7tQms7Fuj/SvfbZ1DkGOQbGG6yWy6XjfkirbJhIFj+8=
 github.com/jojomi/go-script/v2 v2.3.2 h1:ZUMj3WMcaJ9E98ehCnOvA2aEP0vTIKNP1DFbXLm4Mtk=
 github.com/jojomi/go-script/v2 v2.3.2/go.mod h1:t0kj0tsPcbJCkn4gSohKhR3wLeMpdI9Ml79G/wwVx9Y=
+github.com/jojomi/gorun v0.0.0-20230814192952-a715086fbe00 h1:yxIVdvSNAO0Kuh/kl8qUcl1SD3GkqBjDTf/ypcPKZAE=
+github.com/jojomi/gorun v0.0.0-20230814192952-a715086fbe00/go.mod h1:1+tve56HJAbex5kzT7dxAu4mzbSWiy6Xrfc3m0TYvEU=
 github.com/juju/errors v1.0.0 h1:yiq7kjCLll1BiaRuNY53MGI0+EQ3rF6GB+wvboZDefM=
 github.com/juju/errors v1.0.0/go.mod h1:B5x9thDqx0wIMH3+aLIMP9HjItInYWObRovoCFM5Qe8=
 github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 h1:Z9n2FFNUXsshfwJMBgNA0RU6/i7WVaAegv3PtuIHPMs=
