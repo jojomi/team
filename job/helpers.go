@@ -2,6 +2,7 @@ package job
 
 import (
 	"fmt"
+	"github.com/jojomi/gorun"
 	"net/http"
 	"time"
 
@@ -39,6 +40,18 @@ func PrintDryRunTag() {
 }
 
 func debugCommand(cmd script.Command, options ExecutionOptions) {
+	if !options.Verbose && !options.DryRun {
+		return
+	}
+
+	if options.DryRun {
+		PrintDryRunTag()
+	}
+
+	fmt.Println("»", termenv.String(cmd.String()).Foreground(cp.Color("#aaaa00")))
+}
+
+func debugGorunCommand(cmd gorun.Command, options ExecutionOptions) {
 	if !options.Verbose && !options.DryRun {
 		return
 	}

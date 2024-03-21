@@ -8,6 +8,8 @@ package job
 
 import (
 	"fmt"
+
+	"github.com/juju/errors"
 )
 
 const (
@@ -18,6 +20,8 @@ const (
 	// ExecutionPlanExecute is a ExecutionPlan of type Execute.
 	ExecutionPlanExecute
 )
+
+var ErrInvalidExecutionPlan = errors.New("not a valid ExecutionPlan")
 
 const _ExecutionPlanName = "skiplogDoneexecute"
 
@@ -35,6 +39,13 @@ func (x ExecutionPlan) String() string {
 	return fmt.Sprintf("ExecutionPlan(%d)", x)
 }
 
+// IsValid provides a quick way to determine if the typed value is
+// part of the allowed enumerated values
+func (x ExecutionPlan) IsValid() bool {
+	_, ok := _ExecutionPlanMap[x]
+	return ok
+}
+
 var _ExecutionPlanValue = map[string]ExecutionPlan{
 	_ExecutionPlanName[0:4]:   ExecutionPlanSkip,
 	_ExecutionPlanName[4:11]:  ExecutionPlanLogDone,
@@ -46,5 +57,5 @@ func ParseExecutionPlan(name string) (ExecutionPlan, error) {
 	if x, ok := _ExecutionPlanValue[name]; ok {
 		return x, nil
 	}
-	return ExecutionPlan(0), fmt.Errorf("%s is not a valid ExecutionPlan", name)
+	return ExecutionPlan(0), fmt.Errorf("%s is %w", name, ErrInvalidExecutionPlan)
 }

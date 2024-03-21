@@ -2,6 +2,7 @@ package job
 
 import (
 	"fmt"
+	"github.com/jojomi/gorun"
 	"os"
 	"path"
 
@@ -66,15 +67,15 @@ func (x ShellJob) IsPossible() (bool, error) {
 	return true, nil
 }
 
-func (x *ShellJob) getExecuteCommand() script.Command {
+func (x *ShellJob) getExecuteCommand() gorun.Command {
 	command, err := homedir.Expand(x.Exec)
 	if err != nil {
 		panic(err)
 	}
-	return script.LocalCommandFrom(command)
+	return gorun.LocalCommandFrom(command)
 }
 
-func (x *ShellJob) getExecuteDryRunCommand() script.Command {
+func (x *ShellJob) getExecuteDryRunCommand() gorun.Command {
 	if x.ExecDryRun == "" {
 		return nil
 	}
@@ -86,29 +87,25 @@ func (x *ShellJob) getExecuteDryRunCommand() script.Command {
 }
 
 func (x *ShellJob) Execute(options ExecutionOptions) error {
-	sc := script.NewContext()
-	sc.SetEnv("TEAM_DRYRUN", envBool(options.DryRun))
-	sc.SetEnv("TEAM_VERBOSE", envBool(options.Verbose))
-	sc.SetWorkingDir(path.Dir(x.Meta.Filename))
-
-	cmd := x.getExecuteCommand()
-
-	executor := getExecutorByOutputType(x.Meta.Output, sc)
-
-	debugCommand(cmd, options)
+	command := x.getExecuteCommand()
+	debugGorunCommand(command, options)
 
 	if options.DryRun {
-		if cmd = x.getExecuteDryRunCommand(); cmd == nil {
-			return nil
-		}
+		command = x.getExecuteDryRunCommand()
 	}
 
-	pr, err := executor(cmd)
+	runner := gorun.NewWithCommand(command)
+	runner.AddEnv("TEAM_DRYRUN", envBool(options.DryRun))
+	runner.AddEnv("TEAM_VERBOSE", envBool(options.Verbose))
+	runner.InWorkingDir(path.Dir(x.Meta.Filename))
+	// runner.WithoutStdout()
+
+	result, err := runner.Exec()
 	if err != nil {
 		return err
 	}
-	if !pr.Successful() {
-		return fmt.Errorf("unsuccessful command: %s", cmd.String())
+	if !result.Successful() {
+		return fmt.Errorf("unsuccessful command: %s", command.String())
 	}
 
 	if x.Wait && options.Wait {
