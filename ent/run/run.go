@@ -5,6 +5,8 @@ package run
 import (
 	"fmt"
 	"time"
+
+	"entgo.io/ent/dialect/sql"
 )
 
 const (
@@ -73,4 +75,37 @@ func StatusValidator(s Status) error {
 	default:
 		return fmt.Errorf("run: invalid enum value for status field: %q", s)
 	}
+}
+
+// OrderOption defines the ordering options for the Run queries.
+type OrderOption func(*sql.Selector)
+
+// ByID orders the results by the id field.
+func ByID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByJob orders the results by the job field.
+func ByJob(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldJob, opts...).ToFunc()
+}
+
+// ByStart orders the results by the start field.
+func ByStart(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStart, opts...).ToFunc()
+}
+
+// ByEnd orders the results by the end field.
+func ByEnd(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEnd, opts...).ToFunc()
+}
+
+// ByStatus orders the results by the status field.
+func ByStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByLog orders the results by the log field.
+func ByLog(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLog, opts...).ToFunc()
 }

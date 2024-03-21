@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
+	"entgo.io/ent"
+	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/jojomi/team/ent/predicate"
 	"github.com/jojomi/team/ent/run"
-
-	"entgo.io/ent"
 )
 
 const (
@@ -373,9 +373,24 @@ func (m *RunMutation) Where(ps ...predicate.Run) {
 	m.predicates = append(m.predicates, ps...)
 }
 
+// WhereP appends storage-level predicates to the RunMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *RunMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.Run, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
 // Op returns the operation name.
 func (m *RunMutation) Op() Op {
 	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *RunMutation) SetOp(op Op) {
+	m.op = op
 }
 
 // Type returns the node type of this mutation (Run).

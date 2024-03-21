@@ -88,50 +88,8 @@ func (rc *RunCreate) Mutation() *RunMutation {
 
 // Save creates the Run in the database.
 func (rc *RunCreate) Save(ctx context.Context) (*Run, error) {
-	var (
-		err  error
-		node *Run
-	)
 	rc.defaults()
-	if len(rc.hooks) == 0 {
-		if err = rc.check(); err != nil {
-			return nil, err
-		}
-		node, err = rc.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*RunMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = rc.check(); err != nil {
-				return nil, err
-			}
-			rc.mutation = mutation
-			if node, err = rc.sqlSave(ctx); err != nil {
-				return nil, err
-			}
-			mutation.id = &node.ID
-			mutation.done = true
-			return node, err
-		})
-		for i := len(rc.hooks) - 1; i >= 0; i-- {
-			if rc.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = rc.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, rc.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Run)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from RunMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, rc.sqlSave, rc.mutation, rc.hooks)
 }
 
 // SaveX calls Save and panics if Save returns an error.
@@ -181,6 +139,9 @@ func (rc *RunCreate) check() error {
 }
 
 func (rc *RunCreate) sqlSave(ctx context.Context) (*Run, error) {
+	if err := rc.check(); err != nil {
+		return nil, err
+	}
 	_node, _spec := rc.createSpec()
 	if err := sqlgraph.CreateNode(ctx, rc.driver, _spec); err != nil {
 		if sqlgraph.IsConstraintError(err) {
@@ -195,62 +156,38 @@ func (rc *RunCreate) sqlSave(ctx context.Context) (*Run, error) {
 			return nil, err
 		}
 	}
+	rc.mutation.id = &_node.ID
+	rc.mutation.done = true
 	return _node, nil
 }
 
 func (rc *RunCreate) createSpec() (*Run, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Run{config: rc.config}
-		_spec = &sqlgraph.CreateSpec{
-			Table: run.Table,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: run.FieldID,
-			},
-		}
+		_spec = sqlgraph.NewCreateSpec(run.Table, sqlgraph.NewFieldSpec(run.FieldID, field.TypeUUID))
 	)
 	if id, ok := rc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
 	if value, ok := rc.mutation.Job(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: run.FieldJob,
-		})
+		_spec.SetField(run.FieldJob, field.TypeString, value)
 		_node.Job = value
 	}
 	if value, ok := rc.mutation.Start(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeTime,
-			Value:  value,
-			Column: run.FieldStart,
-		})
+		_spec.SetField(run.FieldStart, field.TypeTime, value)
 		_node.Start = value
 	}
 	if value, ok := rc.mutation.End(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeTime,
-			Value:  value,
-			Column: run.FieldEnd,
-		})
+		_spec.SetField(run.FieldEnd, field.TypeTime, value)
 		_node.End = value
 	}
 	if value, ok := rc.mutation.Status(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: run.FieldStatus,
-		})
+		_spec.SetField(run.FieldStatus, field.TypeEnum, value)
 		_node.Status = value
 	}
 	if value, ok := rc.mutation.Log(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: run.FieldLog,
-		})
+		_spec.SetField(run.FieldLog, field.TypeString, value)
 		_node.Log = value
 	}
 	return _node, _spec
@@ -259,11 +196,15 @@ func (rc *RunCreate) createSpec() (*Run, *sqlgraph.CreateSpec) {
 // RunCreateBulk is the builder for creating many Run entities in bulk.
 type RunCreateBulk struct {
 	config
+	err      error
 	builders []*RunCreate
 }
 
 // Save creates the Run entities in the database.
 func (rcb *RunCreateBulk) Save(ctx context.Context) ([]*Run, error) {
+	if rcb.err != nil {
+		return nil, rcb.err
+	}
 	specs := make([]*sqlgraph.CreateSpec, len(rcb.builders))
 	nodes := make([]*Run, len(rcb.builders))
 	mutators := make([]Mutator, len(rcb.builders))
@@ -280,8 +221,8 @@ func (rcb *RunCreateBulk) Save(ctx context.Context) ([]*Run, error) {
 					return nil, err
 				}
 				builder.mutation = mutation
-				nodes[i], specs[i] = builder.createSpec()
 				var err error
+				nodes[i], specs[i] = builder.createSpec()
 				if i < len(mutators)-1 {
 					_, err = mutators[i+1].Mutate(root, rcb.builders[i+1].mutation)
 				} else {

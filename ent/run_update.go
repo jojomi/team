@@ -34,6 +34,14 @@ func (ru *RunUpdate) SetJob(s string) *RunUpdate {
 	return ru
 }
 
+// SetNillableJob sets the "job" field if the given value is not nil.
+func (ru *RunUpdate) SetNillableJob(s *string) *RunUpdate {
+	if s != nil {
+		ru.SetJob(*s)
+	}
+	return ru
+}
+
 // SetStart sets the "start" field.
 func (ru *RunUpdate) SetStart(t time.Time) *RunUpdate {
 	ru.mutation.SetStart(t)
@@ -80,6 +88,14 @@ func (ru *RunUpdate) SetStatus(r run.Status) *RunUpdate {
 	return ru
 }
 
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (ru *RunUpdate) SetNillableStatus(r *run.Status) *RunUpdate {
+	if r != nil {
+		ru.SetStatus(*r)
+	}
+	return ru
+}
+
 // SetLog sets the "log" field.
 func (ru *RunUpdate) SetLog(s string) *RunUpdate {
 	ru.mutation.SetLog(s)
@@ -107,40 +123,7 @@ func (ru *RunUpdate) Mutation() *RunMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (ru *RunUpdate) Save(ctx context.Context) (int, error) {
-	var (
-		err      error
-		affected int
-	)
-	if len(ru.hooks) == 0 {
-		if err = ru.check(); err != nil {
-			return 0, err
-		}
-		affected, err = ru.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*RunMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = ru.check(); err != nil {
-				return 0, err
-			}
-			ru.mutation = mutation
-			affected, err = ru.sqlSave(ctx)
-			mutation.done = true
-			return affected, err
-		})
-		for i := len(ru.hooks) - 1; i >= 0; i-- {
-			if ru.hooks[i] == nil {
-				return 0, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ru.hooks[i](mut)
-		}
-		if _, err := mut.Mutate(ctx, ru.mutation); err != nil {
-			return 0, err
-		}
-	}
-	return affected, err
+	return withHooks(ctx, ru.sqlSave, ru.mutation, ru.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -176,16 +159,10 @@ func (ru *RunUpdate) check() error {
 }
 
 func (ru *RunUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   run.Table,
-			Columns: run.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: run.FieldID,
-			},
-		},
+	if err := ru.check(); err != nil {
+		return n, err
 	}
+	_spec := sqlgraph.NewUpdateSpec(run.Table, run.Columns, sqlgraph.NewFieldSpec(run.FieldID, field.TypeUUID))
 	if ps := ru.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
@@ -194,57 +171,28 @@ func (ru *RunUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 	}
 	if value, ok := ru.mutation.Job(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: run.FieldJob,
-		})
+		_spec.SetField(run.FieldJob, field.TypeString, value)
 	}
 	if value, ok := ru.mutation.Start(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeTime,
-			Value:  value,
-			Column: run.FieldStart,
-		})
+		_spec.SetField(run.FieldStart, field.TypeTime, value)
 	}
 	if ru.mutation.StartCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeTime,
-			Column: run.FieldStart,
-		})
+		_spec.ClearField(run.FieldStart, field.TypeTime)
 	}
 	if value, ok := ru.mutation.End(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeTime,
-			Value:  value,
-			Column: run.FieldEnd,
-		})
+		_spec.SetField(run.FieldEnd, field.TypeTime, value)
 	}
 	if ru.mutation.EndCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeTime,
-			Column: run.FieldEnd,
-		})
+		_spec.ClearField(run.FieldEnd, field.TypeTime)
 	}
 	if value, ok := ru.mutation.Status(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: run.FieldStatus,
-		})
+		_spec.SetField(run.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := ru.mutation.Log(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: run.FieldLog,
-		})
+		_spec.SetField(run.FieldLog, field.TypeString, value)
 	}
 	if ru.mutation.LogCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Column: run.FieldLog,
-		})
+		_spec.ClearField(run.FieldLog, field.TypeString)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, ru.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -254,6 +202,7 @@ func (ru *RunUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		return 0, err
 	}
+	ru.mutation.done = true
 	return n, nil
 }
 
@@ -268,6 +217,14 @@ type RunUpdateOne struct {
 // SetJob sets the "job" field.
 func (ruo *RunUpdateOne) SetJob(s string) *RunUpdateOne {
 	ruo.mutation.SetJob(s)
+	return ruo
+}
+
+// SetNillableJob sets the "job" field if the given value is not nil.
+func (ruo *RunUpdateOne) SetNillableJob(s *string) *RunUpdateOne {
+	if s != nil {
+		ruo.SetJob(*s)
+	}
 	return ruo
 }
 
@@ -317,6 +274,14 @@ func (ruo *RunUpdateOne) SetStatus(r run.Status) *RunUpdateOne {
 	return ruo
 }
 
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (ruo *RunUpdateOne) SetNillableStatus(r *run.Status) *RunUpdateOne {
+	if r != nil {
+		ruo.SetStatus(*r)
+	}
+	return ruo
+}
+
 // SetLog sets the "log" field.
 func (ruo *RunUpdateOne) SetLog(s string) *RunUpdateOne {
 	ruo.mutation.SetLog(s)
@@ -342,6 +307,12 @@ func (ruo *RunUpdateOne) Mutation() *RunMutation {
 	return ruo.mutation
 }
 
+// Where appends a list predicates to the RunUpdate builder.
+func (ruo *RunUpdateOne) Where(ps ...predicate.Run) *RunUpdateOne {
+	ruo.mutation.Where(ps...)
+	return ruo
+}
+
 // Select allows selecting one or more fields (columns) of the returned entity.
 // The default is selecting all fields defined in the entity schema.
 func (ruo *RunUpdateOne) Select(field string, fields ...string) *RunUpdateOne {
@@ -351,46 +322,7 @@ func (ruo *RunUpdateOne) Select(field string, fields ...string) *RunUpdateOne {
 
 // Save executes the query and returns the updated Run entity.
 func (ruo *RunUpdateOne) Save(ctx context.Context) (*Run, error) {
-	var (
-		err  error
-		node *Run
-	)
-	if len(ruo.hooks) == 0 {
-		if err = ruo.check(); err != nil {
-			return nil, err
-		}
-		node, err = ruo.sqlSave(ctx)
-	} else {
-		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
-			mutation, ok := m.(*RunMutation)
-			if !ok {
-				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = ruo.check(); err != nil {
-				return nil, err
-			}
-			ruo.mutation = mutation
-			node, err = ruo.sqlSave(ctx)
-			mutation.done = true
-			return node, err
-		})
-		for i := len(ruo.hooks) - 1; i >= 0; i-- {
-			if ruo.hooks[i] == nil {
-				return nil, fmt.Errorf("ent: uninitialized hook (forgotten import ent/runtime?)")
-			}
-			mut = ruo.hooks[i](mut)
-		}
-		v, err := mut.Mutate(ctx, ruo.mutation)
-		if err != nil {
-			return nil, err
-		}
-		nv, ok := v.(*Run)
-		if !ok {
-			return nil, fmt.Errorf("unexpected node type %T returned from RunMutation", v)
-		}
-		node = nv
-	}
-	return node, err
+	return withHooks(ctx, ruo.sqlSave, ruo.mutation, ruo.hooks)
 }
 
 // SaveX is like Save, but panics if an error occurs.
@@ -426,16 +358,10 @@ func (ruo *RunUpdateOne) check() error {
 }
 
 func (ruo *RunUpdateOne) sqlSave(ctx context.Context) (_node *Run, err error) {
-	_spec := &sqlgraph.UpdateSpec{
-		Node: &sqlgraph.NodeSpec{
-			Table:   run.Table,
-			Columns: run.Columns,
-			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeUUID,
-				Column: run.FieldID,
-			},
-		},
+	if err := ruo.check(); err != nil {
+		return _node, err
 	}
+	_spec := sqlgraph.NewUpdateSpec(run.Table, run.Columns, sqlgraph.NewFieldSpec(run.FieldID, field.TypeUUID))
 	id, ok := ruo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Run.id" for update`)}
@@ -461,57 +387,28 @@ func (ruo *RunUpdateOne) sqlSave(ctx context.Context) (_node *Run, err error) {
 		}
 	}
 	if value, ok := ruo.mutation.Job(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: run.FieldJob,
-		})
+		_spec.SetField(run.FieldJob, field.TypeString, value)
 	}
 	if value, ok := ruo.mutation.Start(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeTime,
-			Value:  value,
-			Column: run.FieldStart,
-		})
+		_spec.SetField(run.FieldStart, field.TypeTime, value)
 	}
 	if ruo.mutation.StartCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeTime,
-			Column: run.FieldStart,
-		})
+		_spec.ClearField(run.FieldStart, field.TypeTime)
 	}
 	if value, ok := ruo.mutation.End(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeTime,
-			Value:  value,
-			Column: run.FieldEnd,
-		})
+		_spec.SetField(run.FieldEnd, field.TypeTime, value)
 	}
 	if ruo.mutation.EndCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeTime,
-			Column: run.FieldEnd,
-		})
+		_spec.ClearField(run.FieldEnd, field.TypeTime)
 	}
 	if value, ok := ruo.mutation.Status(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeEnum,
-			Value:  value,
-			Column: run.FieldStatus,
-		})
+		_spec.SetField(run.FieldStatus, field.TypeEnum, value)
 	}
 	if value, ok := ruo.mutation.Log(); ok {
-		_spec.Fields.Set = append(_spec.Fields.Set, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Value:  value,
-			Column: run.FieldLog,
-		})
+		_spec.SetField(run.FieldLog, field.TypeString, value)
 	}
 	if ruo.mutation.LogCleared() {
-		_spec.Fields.Clear = append(_spec.Fields.Clear, &sqlgraph.FieldSpec{
-			Type:   field.TypeString,
-			Column: run.FieldLog,
-		})
+		_spec.ClearField(run.FieldLog, field.TypeString)
 	}
 	_node = &Run{config: ruo.config}
 	_spec.Assign = _node.assignValues
@@ -524,5 +421,6 @@ func (ruo *RunUpdateOne) sqlSave(ctx context.Context) (_node *Run, err error) {
 		}
 		return nil, err
 	}
+	ruo.mutation.done = true
 	return _node, nil
 }

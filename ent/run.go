@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/jojomi/team/ent/run"
@@ -26,12 +27,13 @@ type Run struct {
 	// Status holds the value of the "status" field.
 	Status run.Status `json:"status,omitempty"`
 	// Log holds the value of the "log" field.
-	Log string `json:"log,omitempty"`
+	Log          string `json:"log,omitempty"`
+	selectValues sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
-func (*Run) scanValues(columns []string) ([]interface{}, error) {
-	values := make([]interface{}, len(columns))
+func (*Run) scanValues(columns []string) ([]any, error) {
+	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
 		case run.FieldJob, run.FieldStatus, run.FieldLog:
@@ -41,7 +43,7 @@ func (*Run) scanValues(columns []string) ([]interface{}, error) {
 		case run.FieldID:
 			values[i] = new(uuid.UUID)
 		default:
-			return nil, fmt.Errorf("unexpected column %q for type Run", columns[i])
+			values[i] = new(sql.UnknownType)
 		}
 	}
 	return values, nil
@@ -49,7 +51,7 @@ func (*Run) scanValues(columns []string) ([]interface{}, error) {
 
 // assignValues assigns the values that were returned from sql.Rows (after scanning)
 // to the Run fields.
-func (r *Run) assignValues(columns []string, values []interface{}) error {
+func (r *Run) assignValues(columns []string, values []any) error {
 	if m, n := len(values), len(columns); m < n {
 		return fmt.Errorf("mismatch number of scan values: %d != %d", m, n)
 	}
@@ -91,16 +93,24 @@ func (r *Run) assignValues(columns []string, values []interface{}) error {
 			} else if value.Valid {
 				r.Log = value.String
 			}
+		default:
+			r.selectValues.Set(columns[i], values[i])
 		}
 	}
 	return nil
+}
+
+// Value returns the ent.Value that was dynamically selected and assigned to the Run.
+// This includes values selected through modifiers, order, etc.
+func (r *Run) Value(name string) (ent.Value, error) {
+	return r.selectValues.Get(name)
 }
 
 // Update returns a builder for updating this Run.
 // Note that you need to call Run.Unwrap() before calling this method if this Run
 // was returned from a transaction, and the transaction was committed or rolled back.
 func (r *Run) Update() *RunUpdateOne {
-	return (&RunClient{config: r.config}).UpdateOne(r)
+	return NewRunClient(r.config).UpdateOne(r)
 }
 
 // Unwrap unwraps the Run entity that was returned from a transaction after it was closed,
@@ -139,9 +149,3 @@ func (r *Run) String() string {
 
 // Runs is a parsable slice of Run.
 type Runs []*Run
-
-func (r Runs) config(cfg config) {
-	for _i := range r {
-		r[_i].config = cfg
-	}
-}

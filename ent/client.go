@@ -4,16 +4,18 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
+	"reflect"
 
 	"github.com/google/uuid"
 	"github.com/jojomi/team/ent/migrate"
 
-	"github.com/jojomi/team/ent/run"
-
+	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
+	"github.com/jojomi/team/ent/run"
 )
 
 // Client is the client that holds all ent builders.
@@ -27,9 +29,7 @@ type Client struct {
 
 // NewClient creates a new client configured with the given options.
 func NewClient(opts ...Option) *Client {
-	cfg := config{log: log.Println, hooks: &hooks{}}
-	cfg.options(opts...)
-	client := &Client{config: cfg}
+	client := &Client{config: newConfig(opts...)}
 	client.init()
 	return client
 }
@@ -37,6 +37,62 @@ func NewClient(opts ...Option) *Client {
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Run = NewRunClient(c.config)
+}
+
+type (
+	// config is the configuration for the client and its builder.
+	config struct {
+		// driver used for executing database requests.
+		driver dialect.Driver
+		// debug enable a debug logging.
+		debug bool
+		// log used for logging on debug mode.
+		log func(...any)
+		// hooks to execute on mutations.
+		hooks *hooks
+		// interceptors to execute on queries.
+		inters *inters
+	}
+	// Option function to configure the client.
+	Option func(*config)
+)
+
+// newConfig creates a new config for the client.
+func newConfig(opts ...Option) config {
+	cfg := config{log: log.Println, hooks: &hooks{}, inters: &inters{}}
+	cfg.options(opts...)
+	return cfg
+}
+
+// options applies the options on the config object.
+func (c *config) options(opts ...Option) {
+	for _, opt := range opts {
+		opt(c)
+	}
+	if c.debug {
+		c.driver = dialect.Debug(c.driver, c.log)
+	}
+}
+
+// Debug enables debug logging on the ent.Driver.
+func Debug() Option {
+	return func(c *config) {
+		c.debug = true
+	}
+}
+
+// Log sets the logging function for debug mode.
+func Log(fn func(...any)) Option {
+	return func(c *config) {
+		c.log = fn
+	}
+}
+
+// Driver configures the client driver.
+func Driver(driver dialect.Driver) Option {
+	return func(c *config) {
+		c.driver = driver
+	}
 }
 
 // Open opens a database/sql.DB specified by the driver name and
@@ -55,11 +111,14 @@ func Open(driverName, dataSourceName string, options ...Option) (*Client, error)
 	}
 }
 
+// ErrTxStarted is returned when trying to start a new transaction from a transactional client.
+var ErrTxStarted = errors.New("ent: cannot start a transaction within a transaction")
+
 // Tx returns a new transactional client. The provided context
 // is used until the transaction is committed or rolled back.
 func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	if _, ok := c.driver.(*txDriver); ok {
-		return nil, fmt.Errorf("ent: cannot start a transaction within a transaction")
+		return nil, ErrTxStarted
 	}
 	tx, err := newTx(ctx, c.driver)
 	if err != nil {
@@ -77,7 +136,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 // BeginTx returns a transactional client with specified options.
 func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) {
 	if _, ok := c.driver.(*txDriver); ok {
-		return nil, fmt.Errorf("ent: cannot start a transaction within a transaction")
+		return nil, errors.New("ent: cannot start a transaction within a transaction")
 	}
 	tx, err := c.driver.(interface {
 		BeginTx(context.Context, *sql.TxOptions) (dialect.Tx, error)
@@ -100,7 +159,6 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 //		Run.
 //		Query().
 //		Count(ctx)
-//
 func (c *Client) Debug() *Client {
 	if c.debug {
 		return c
@@ -123,6 +181,22 @@ func (c *Client) Use(hooks ...Hook) {
 	c.Run.Use(hooks...)
 }
 
+// Intercept adds the query interceptors to all the entity clients.
+// In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
+func (c *Client) Intercept(interceptors ...Interceptor) {
+	c.Run.Intercept(interceptors...)
+}
+
+// Mutate implements the ent.Mutator interface.
+func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
+	switch m := m.(type) {
+	case *RunMutation:
+		return c.Run.mutate(ctx, m)
+	default:
+		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
 // RunClient is a client for the Run schema.
 type RunClient struct {
 	config
@@ -139,6 +213,12 @@ func (c *RunClient) Use(hooks ...Hook) {
 	c.hooks.Run = append(c.hooks.Run, hooks...)
 }
 
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `run.Intercept(f(g(h())))`.
+func (c *RunClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Run = append(c.inters.Run, interceptors...)
+}
+
 // Create returns a builder for creating a Run entity.
 func (c *RunClient) Create() *RunCreate {
 	mutation := newRunMutation(c.config, OpCreate)
@@ -147,6 +227,21 @@ func (c *RunClient) Create() *RunCreate {
 
 // CreateBulk returns a builder for creating a bulk of Run entities.
 func (c *RunClient) CreateBulk(builders ...*RunCreate) *RunCreateBulk {
+	return &RunCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *RunClient) MapCreateBulk(slice any, setFunc func(*RunCreate, int)) *RunCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &RunCreateBulk{err: fmt.Errorf("calling to RunClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*RunCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
 	return &RunCreateBulk{config: c.config, builders: builders}
 }
 
@@ -179,7 +274,7 @@ func (c *RunClient) DeleteOne(r *Run) *RunDeleteOne {
 	return c.DeleteOneID(r.ID)
 }
 
-// DeleteOne returns a builder for deleting the given entity by its id.
+// DeleteOneID returns a builder for deleting the given entity by its id.
 func (c *RunClient) DeleteOneID(id uuid.UUID) *RunDeleteOne {
 	builder := c.Delete().Where(run.ID(id))
 	builder.mutation.id = &id
@@ -191,6 +286,8 @@ func (c *RunClient) DeleteOneID(id uuid.UUID) *RunDeleteOne {
 func (c *RunClient) Query() *RunQuery {
 	return &RunQuery{
 		config: c.config,
+		ctx:    &QueryContext{Type: TypeRun},
+		inters: c.Interceptors(),
 	}
 }
 
@@ -212,3 +309,33 @@ func (c *RunClient) GetX(ctx context.Context, id uuid.UUID) *Run {
 func (c *RunClient) Hooks() []Hook {
 	return c.hooks.Run
 }
+
+// Interceptors returns the client interceptors.
+func (c *RunClient) Interceptors() []Interceptor {
+	return c.inters.Run
+}
+
+func (c *RunClient) mutate(ctx context.Context, m *RunMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RunCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RunUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RunUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RunDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Run mutation op: %q", m.Op())
+	}
+}
+
+// hooks and interceptors per client, for fast access.
+type (
+	hooks struct {
+		Run []ent.Hook
+	}
+	inters struct {
+		Run []ent.Interceptor
+	}
+)
