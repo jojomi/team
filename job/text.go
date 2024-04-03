@@ -28,11 +28,11 @@ func (x *TextJob) WithFilename(filename string) Job {
 }
 
 func (x *TextJob) Pre() error {
-	return nil
+	return execCommand(x.Meta.Pre.Command)
 }
 
 func (x *TextJob) Post() error {
-	return nil
+	return execCommand(x.Meta.Post.Command)
 }
 
 func LoadTextJobFromFile(filename string) (*TextJob, error) {

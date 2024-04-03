@@ -137,3 +137,15 @@ func IsPossible(j Job) (bool, error) {
 	}
 	return true, nil
 }
+
+func execCommand(input string) error {
+	if input == "" {
+		return nil
+	}
+
+	res, err := gorun.NewLocal(input).Exec()
+	if err == nil {
+		return res.Error()
+	}
+	return err
+}
