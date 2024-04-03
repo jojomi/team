@@ -13,6 +13,7 @@ require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/jojomi/assert v0.0.0-20230426204417-7cee44b4d7e3
 	github.com/jojomi/go-script/v2 v2.3.2
+	github.com/jojomi/gorun v0.0.0-20240321022359-dc1dd00914be
 	github.com/juju/errors v1.0.0
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/mitchellh/go-homedir v1.1.0
@@ -27,7 +28,7 @@ require (
 )
 
 require (
-	ariga.io/atlas v0.20.0 // indirect
+	ariga.io/atlas v0.21.0 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
@@ -35,9 +36,8 @@ require (
 	github.com/gernest/wow v0.1.0 // indirect
 	github.com/go-openapi/inflect v0.21.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/hashicorp/hcl/v2 v2.20.0 // indirect
+	github.com/hashicorp/hcl/v2 v2.20.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/jojomi/gorun v0.0.0-20230814192952-a715086fbe00 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
