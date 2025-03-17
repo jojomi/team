@@ -379,8 +379,9 @@ func handleJobPreparation(j job.Job, env EnvRoot, index, count int) (job.Executi
 
 func handleJobExecution(j job.Job, executionOptions job.ExecutionOptions, env EnvRoot) error {
 	var (
-		err error
-		id  uuid.UUID
+		err    error
+		jobErr error
+		id     uuid.UUID
 	)
 
 	// is this job possible?
@@ -409,7 +410,7 @@ func handleJobExecution(j job.Job, executionOptions job.ExecutionOptions, env En
 			return jujuErrors.Annotate(err, "could not pre")
 		}
 
-		err = j.Execute(executionOptions)
+		jobErr = j.Execute(executionOptions)
 
 		err = j.Post()
 		if err != nil {
@@ -425,8 +426,8 @@ func handleJobExecution(j job.Job, executionOptions job.ExecutionOptions, env En
 		}
 	}
 
-	if err != nil {
-		return jujuErrors.Annotate(err, "could not execute")
+	if jobErr != nil {
+		return jujuErrors.Annotate(err, "unsuccessful execution")
 	}
 
 	return nil
