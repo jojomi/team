@@ -87,15 +87,19 @@ func handleRoot(env EnvRoot) error {
 	log.Debug().Msgf("got %d jobs from dir '%s' and file '%s' (unfiltered)", len(pool.Jobs()), env.JobDir, env.JobFile)
 	if env.UnattendedOnly {
 		pool = pool.UnattendedOnly()
+		log.Debug().Msgf("got %d jobs after filtering for unattended jobs", len(pool.Jobs()))
 	}
 	if env.AttendedOnly {
 		pool = pool.AttendedOnly()
+		log.Debug().Msgf("got %d jobs after filtering for attended jobs", len(pool.Jobs()))
 	}
 	if env.PossibleOnly {
 		pool = pool.PossibleOnly()
+		log.Debug().Msgf("got %d jobs after filtering for possible jobs", len(pool.Jobs()))
 	}
 	if !env.ShowUnfixable {
 		pool = pool.PossibleOrFixableOnly()
+		log.Debug().Msgf("got %d jobs after filtering for possible or fixable jobs", len(pool.Jobs()))
 	}
 	log.Debug().Msgf("got %d jobs after filtering for state", len(pool.Jobs()))
 
@@ -159,7 +163,7 @@ func handleRoot(env EnvRoot) error {
 			diff := time.Now().Sub(start).Round(time.Second)
 			if err != nil {
 				if _, ok := err.(job.ImpossibleJobError); !ok {
-					log.Error().Err(err).Str("filename", j.Metadata().Name).Msg("could not handle job")
+					log.Error().Err(err).Str("filename", j.Metadata().Filename).Msg("could not handle job")
 				}
 				job.PrintUnsuccessful("", &diff)
 				fmt.Println()
@@ -210,7 +214,7 @@ func handleRoot(env EnvRoot) error {
 				continue
 			}
 			if err != nil {
-				log.Error().Err(err).Str("filename", j.Metadata().Name).Msg("could not handle job")
+				log.Error().Err(err).Str("filename", j.Metadata().Filename).Msg("could not handle job")
 				job.PrintUnsuccessful("", &diff)
 				fmt.Println()
 				continue
@@ -427,7 +431,7 @@ func handleJobExecution(j job.Job, executionOptions job.ExecutionOptions, env En
 	}
 
 	if jobErr != nil {
-		return jujuErrors.Annotate(err, "unsuccessful execution")
+		return jujuErrors.Annotate(jobErr, "unsuccessful execution")
 	}
 
 	return nil
