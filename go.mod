@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.24.1
 
 require (
-	entgo.io/ent v0.14.3
+	entgo.io/ent v0.14.4
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/PaesslerAG/gval v1.2.4
 	github.com/alexeyco/goozzle v0.0.0-20190204125551-a9179c201c4b
@@ -19,7 +19,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/muesli/termenv v0.16.0
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
-	github.com/rs/zerolog v1.33.0
+	github.com/rs/zerolog v1.34.0
 	github.com/shibukawa/configdir v0.0.0-20170330084843-e180dbdc8da0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
