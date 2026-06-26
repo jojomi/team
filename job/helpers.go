@@ -99,6 +99,10 @@ func PrintHeader(j Job, next *time.Time) {
 		fmt.Printf(" (from %s)", filename)
 	}
 
+	if desc := j.Metadata().Description; desc != "" {
+		fmt.Printf("\n%s", termenv.String(desc).Foreground(cp.Color("#aaaaaa")))
+	}
+
 	if next != nil {
 		fmt.Printf("\nFällig am %s (%s)", next.Format(DateFormat), Timeago(*next))
 	}
