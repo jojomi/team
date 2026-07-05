@@ -56,14 +56,6 @@ func LoadShellJobFromFile(filename string) (*ShellJob, error) {
 }
 
 func (x ShellJob) IsPossible() (bool, error) {
-	// binary available?
-	sc := script.NewContext()
-	sc.SetWorkingDir(path.Dir(x.Meta.Filename))
-	c := x.getExecuteCommand()
-	if !sc.CommandExists(c.Binary()) && !sc.FileExists(c.Binary()) {
-		return false, fmt.Errorf("missing command: %s, working dir is %s", c.Binary(), sc.WorkingDir())
-	}
-
 	return true, nil
 }
 
